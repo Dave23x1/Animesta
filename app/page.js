@@ -1,34 +1,21 @@
 "use client";
-import { useEffect, useState } from "react";
-import { fetchPopularAnime } from "@/lib/api/animeapi.js";
-import Header from "./block/Header.jsx";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Header from "./block/Header";
 
 const HomePage = () => {
   const [animeList, setAnimeList] = useState([]);
-  const [query, setQuery] = useState(""); // To store query parameter
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const search = searchParams.get("search");
-
-  console.log("search", search);
+  const [selectedAnime, setSelectedAnime] = useState(null);
 
   useEffect(() => {
-    const getPopularAnime = async () => {
-      try {
-        const data = await fetchPopularAnime(search);
-        setAnimeList(data);
-      } catch (error) {
-        console.error("Error fetching popular anime:", error);
-      }
-    };
-
-    getPopularAnime();
-  }, [search]);
+    fetch("https://api.jikan.moe/v4/anime")
+      .then((response) => response.json())
+      .then((data) => {
+        setAnimeList(data.data);
+      })
+      .catch((error) => console.error(error));
+  }, []);
 
   return (
     <div>
@@ -37,22 +24,23 @@ const HomePage = () => {
         <h2 className="text-3xl font-bold mb-6">Popular Anime</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {animeList.length === 0 ? (
-            <div className="flex justify-center items-center">
-              <div className="spinner-border animate-spin border-t-2 border-b-2 border-blue-500 rounded-full w-8 h-8"></div>
-            </div>
+            <p>Loading anime...</p>
           ) : (
             animeList.map((anime) => (
               <div
                 key={anime.mal_id}
-                className="bg-white shadow-lg rounded-lg overflow-hidden"
+                className="bg-white shadow-lg rounded-lg overflow-hidden cursor-pointer"
+                onClick={() => setSelectedAnime(anime)}
               >
-                <Image
-                  src={anime.images.jpg.large_image_url}
-                  alt={anime.title}
-                  width={300}
-                  height={400}
-                  className="w-full h-56 object-cover"
-                />
+                {anime.images?.jpg?.large_image_url && (
+                  <Image
+                    src={anime.images.jpg.large_image_url}
+                    alt={anime.title}
+                    width={300}
+                    height={400}
+                    className="w-full h-56 object-cover"
+                  />
+                )}
                 <div className="p-4">
                   <h3 className="font-semibold text-lg">{anime.title}</h3>
                   <p className="text-sm text-gray-600">
@@ -63,6 +51,26 @@ const HomePage = () => {
             ))
           )}
         </div>
+
+        {selectedAnime && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4">
+            <div className="bg-white p-6 rounded-lg w-full max-w-2xl">
+              <h2 className="text-2xl font-bold mb-4">{selectedAnime.title}</h2>
+              <iframe
+                src={selectedAnime.trailer_url}
+                width="100%"
+                height="400"
+                allowFullScreen
+              />
+              <button
+                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+                onClick={() => setSelectedAnime(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
